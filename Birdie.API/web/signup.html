@@ -1,0 +1,59 @@
+<html>
+  <head>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css"
+      integrity="sha512-8bHTC73gkZ7rZ7vpqUQThUDhqcNFyYi2xgDgPDHc+GXVGHXq+xPjynxIopALmOPqzo9JZj0k6OqqewdGO3EsrQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+      function submit() {
+        const { value: userName } = document.getElementById('username');
+        const { value: password } = document.getElementById('password');
+        const { value: passwordConfirm } = document.getElementById('passwordConfirm');
+
+        axios
+          .post('http://localhost:5000/Auth/signup', {
+            userName,
+            password,
+            passwordConfirm,
+          })
+          .then(({ data }) => {
+            if (data) {
+              alert('Success, you will be redirected in a moment');
+              location.pathname = '/web/login.html';
+            } else {
+              alert('Sorry, an error occurred');
+            }
+          });
+      }
+    </script>
+  </head>
+  <body>
+    <div class="ui two column centered grid">
+      <div class="column">
+        <div class="ui segment">
+          <form class="ui form">
+            <h4 class="ui dividing header">Welcome to Birdie - Sign up</h4>
+            <div class="field">
+              <label>User name</label>
+              <input id="username" type="text" name="username" placeholder="user name" />
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input id="password" name="password" type="password" placeholder="password" />
+            </div>
+            <div class="field">
+              <label>Password confirm</label>
+              <input id="passwordConfirm" name="passwordConfirm" type="password" placeholder="password confirm" />
+            </div>
+            <a class="ui button primary" onclick="submit()">Submit</a>
+            <a class="ui button" href="login.html">Cancel</a>
+          </form>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

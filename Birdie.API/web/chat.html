@@ -1,0 +1,191 @@
+<html>
+  <head>
+    <script>
+      function parseJwt(token) {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map(function (c) {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            })
+            .join('')
+        );
+
+        return JSON.parse(jsonPayload);
+      }
+
+      const token = sessionStorage.getItem('token');
+      let currentUserName = '';
+      let currentUserId = 0;
+
+      if (!token) {
+        redirectToLogin();
+      } else {
+        const parsedToken = parseJwt(token);
+        if (Date.now() >= token.exp * 1000) redirectToLogin();
+        currentUserName = parsedToken.unique_name;
+        currentUserId = parsedToken.nameid;
+      }
+
+      function redirectToLogin() {
+        location.pathname = `web/login.html`;
+      }
+    </script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css"
+      integrity="sha512-8bHTC73gkZ7rZ7vpqUQThUDhqcNFyYi2xgDgPDHc+GXVGHXq+xPjynxIopALmOPqzo9JZj0k6OqqewdGO3EsrQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <script>
+      const socketUrl = 'ws://localhost:5000/ws';
+      let socket = null;
+
+      function sendMessage(message) {
+        socket.send(message);
+      }
+    </script>
+    <script>
+      const messageType = {
+        Join: 'Join',
+        Content: 'Content',
+        Bot: 'Bot',
+      };
+
+      function joinRoom() {
+        const roomIdentifier = sessionStorage.getItem('room');
+
+        if (roomIdentifier) {
+          initSocket(() => {
+            const joinRoomMessage = {
+              Type: messageType.Join,
+              Content: roomIdentifier,
+              UserId: currentUserId,
+              UserName: currentUserName,
+            };
+
+            sendMessage(JSON.stringify(joinRoomMessage));
+          });
+        } else {
+          alert(`You didn't select any room`);
+          location.pathname = `web/lobby.html`;
+        }
+      }
+
+      function initSocket(joinRoomCallback) {
+        socket = new WebSocket(socketUrl);
+
+        socket.onopen = (event) => {
+          joinRoomCallback();
+        };
+        socket.onerror = (event) => {};
+        socket.onmessage = (event) => {
+          appendNewMessage(event.data);
+        };
+        socket.onclose = (event) => {
+          alert(`An error has occurred`);
+          location.pathname = `web/lobby.html`;
+        };
+      }
+
+      function appendNewMessage(message) {
+        const messageObj = JSON.parse(message);
+        var messageDiv = document.createElement('div');
+        let messageHtml = '';
+        const isBot = messageObj.UserId === 1;
+        const date = new Date();
+        const timestamp = `[${date.toLocaleDateString()} ${date.toLocaleTimeString()}]`;
+        if (messageObj.Type === 0) {
+          if (isBot) return;
+          messageHtml = `<b>${timestamp} ${messageObj.Content}</b>`;
+        } else if (messageObj.Type === 2) {
+          const isStockQuery = messageObj.Content.indexOf('/stock') === 0;
+          if (isStockQuery) {
+            messageDiv.style = 'color: blue';
+            messageHtml = `${timestamp} <b>${messageObj.UserName}</b> is asking <b style="color: blue">BOT</b> for <i>${messageObj.Content}</i>`;
+          } else {
+            messageDiv.style = isBot
+              ? `color: ${messageObj.Content.toLowerCase().indexOf('unfortunately') === 0 ? 'red' : 'green'}`
+              : '';
+
+            messageHtml = `${timestamp} <b>${isBot ? 'BOT' : messageObj.UserName}</b>: ${messageObj.Content}`;
+          }
+        }
+        messageDiv.innerHTML = messageHtml;
+        var messagesDiv = document.getElementById('messages');
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        if (messagesDiv.childElementCount == 51) {
+          messagesDiv.removeChild(messagesDiv.getElementsByTagName('div')[0]);
+        }
+      }
+
+      function send(e) {
+        if (e.key === 'Enter') {
+          const content = e.target.value;
+
+          if (content.indexOf('/stock') === 0) {
+            sendNormalMessage(content);
+            var msg = {
+              Type: messageType.Bot,
+              Content: content,
+              UserId: currentUserId,
+              UserName: currentUserName,
+            };
+            sendMessage(JSON.stringify(msg));
+          } else {
+            sendNormalMessage(content);
+          }
+          
+          e.target.value = '';
+        }
+      }
+
+      function sendNormalMessage(content) {
+        var msg = {
+          Type: messageType.Content,
+          Content: content,
+          UserId: currentUserId,
+          UserName: currentUserName,
+        };
+        sendMessage(JSON.stringify(msg));
+      }
+
+      function leave() {
+        sessionStorage.removeItem('room');
+        sessionStorage.removeItem('roomName');
+        location.pathname = `web/lobby.html`;
+      }
+
+      joinRoom();
+    </script>
+  </head>
+  <body>
+    <div class="ui equal width centered grid">
+      <div class="twelve wide column">
+        <div class="ui segment piled">
+          <h4 class="ui dividing header">
+            Birdie - Chat room: <span id="roomName"></span> - <a style="cursor: pointer" onclick="leave()">Leave</a>
+          </h4>
+          <div id="messages" class="ui segment." style="min-height: 350px; max-height: 350px; overflow-y: scroll"></div>
+          <div class="ui icon input" style="width: 100%">
+            <input
+              type="text"
+              value=""
+              placeholder="type your message here and press enter to send..."
+              onkeyup="send(event)"
+            />
+            <i class="paper plane outline icon"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const roomName = document.getElementById('roomName');
+      roomName.innerText = sessionStorage.getItem('roomName') ?? 'unknown';
+    </script>
+  </body>
+</html>

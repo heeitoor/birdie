@@ -1,0 +1,53 @@
+<html>
+  <head>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css"
+      integrity="sha512-8bHTC73gkZ7rZ7vpqUQThUDhqcNFyYi2xgDgPDHc+GXVGHXq+xPjynxIopALmOPqzo9JZj0k6OqqewdGO3EsrQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+  </head>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script>
+    function submit() {
+      const { value: userName } = document.getElementById('username');
+      const { value: password } = document.getElementById('password');
+
+      axios
+        .post('http://localhost:5000/Auth/login', {
+          userName,
+          password,
+        })
+        .then(({ data }) => {
+          if (data.accessToken) {
+            sessionStorage.setItem('token', data.accessToken);
+            location.pathname = 'web/lobby.html';
+          } else {
+            alert('Sorry, an error occurred');
+          }
+        });
+    }
+  </script>
+  <body>
+    <div class="ui three column centered grid">
+      <div class="column">
+        <div class="ui segment">
+          <form class="ui form">
+            <h4 class="ui dividing header">Welcome to Birdie - Login</h4>
+            <div class="field">
+              <label>User name</label>
+              <input id="username" type="text" name="username" placeholder="password" />
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input id="password" name="password" type="password" placeholder="password" />
+            </div>
+            <a class="ui button primary" onclick="submit()">Login</a>
+            <a href="/web/signup.html">Sign up</a>
+          </form>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
